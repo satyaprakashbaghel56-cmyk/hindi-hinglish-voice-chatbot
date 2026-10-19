@@ -1,0 +1,162 @@
+!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12315a">
+  <title>Hindi Hinglish Voice Chatbot</title>
+  <style>
+    :root { color-scheme: light; --navy:#12315a; --blue:#2563eb; --green:#15803d; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:#eef2f7; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#172033; display:flex; justify-content:center; padding:14px; }
+    .app { width:100%; max-width:760px; display:flex; flex-direction:column; min-height:calc(100vh - 28px); background:#fff; border-radius:22px; overflow:hidden; box-shadow:0 12px 38px #10203a18; }
+    header { background:var(--navy); color:white; padding:20px 18px; text-align:center; }
+    header h1 { margin:0; font-size:clamp(1.2rem,4vw,1.7rem); }
+    header p { margin:7px 0 0; font-size:.92rem; color:#dbeafe; }
+    #status { padding:8px 14px; font-size:.85rem; text-align:center; background:#f4f7fb; color:#526078; }
+    #messages { padding:16px; flex:1; overflow-y:auto; min-height:280px; max-height:58vh; display:flex; flex-direction:column; gap:12px; }
+    .bubble { padding:11px 14px; border-radius:16px; max-width:88%; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.45; }
+    .bot { background:#edf2f8; align-self:flex-start; border-bottom-left-radius:5px; }
+    .user { background:#dbeafe; align-self:flex-end; border-bottom-right-radius:5px; }
+    .label { display:block; font-size:.75rem; font-weight:700; margin-bottom:3px; opacity:.72; }
+    .composer { padding:12px; border-top:1px solid #e5eaf1; display:grid; grid-template-columns:1fr auto; gap:8px; }
+    input { min-width:0; padding:13px; border:1px solid #cbd5e1; border-radius:12px; font:inherit; outline-color:var(--blue); }
+    .controls { padding:0 12px 14px; display:flex; gap:8px; flex-wrap:wrap; }
+    button { border:0; border-radius:12px; padding:12px 14px; font:inherit; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:wait; }
+    #send { background:var(--blue); color:white; }
+    #mic { background:var(--green); color:white; flex:1; }
+    #voice { background:#e8edf5; color:#1e293b; flex:1; }
+    #clear { background:#fce7e7; color:#991b1b; }
+    .note { font-size:.78rem; color:#667085; text-align:center; padding:0 14px 14px; }
+    @media (max-width:480px) { body { padding:0; } .app { min-height:100vh; border-radius:0; } #messages { max-height:none; } button { padding:11px 12px; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>🤖 Hindi Hinglish Voice Chatbot</h1>
+      <p>Likho ya bolo — main jawab dunga!</p>
+    </header>
+    <div id="status" role="status">Ready — message likho ya 🎤 Speak dabao.</div>
+    <section id="messages" aria-live="polite">
+      <div class="bubble bot"><span class="label">Bot</span>Namaste! Main tumhara chatbot hoon. Hindi ya Hinglish mein baat karo.</div>
+    </section>
+    <form class="composer" id="chat-form">
+      <input id="message" maxlength="1000" autocomplete="off" placeholder="Yahan message likho..." aria-label="Message">
+      <button id="send" type="submit">Send</button>
+    </form>
+    <div class="controls">
+      <button id="mic" type="button">🎤 Speak</button>
+      <button id="voice" type="button">🔊 Voice ON</button>
+      <button id="clear" type="button">Clear</button>
+    </div>
+    <p class="note">Microphone ke liye browser permission zaroori hai. Speech recognition ko internet chahiye ho sakta hai.</p>
+  </main>
+<script>
+(() => {
+  const messages = document.getElementById('messages');
+  const input = document.getElementById('message');
+  const form = document.getElementById('chat-form');
+  const sendBtn = document.getElementById('send');
+  const micBtn = document.getElementById('mic');
+  const voiceBtn = document.getElementById('voice');
+  const clearBtn = document.getElementById('clear');
+  const status = document.getElementById('status');
+  let voiceOn = true;
+  let recognition = null;
+
+  function addBubble(who, text, type) {
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${type}`;
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = who;
+    const content = document.createElement('span');
+    content.textContent = text;
+    bubble.append(label, content);
+    messages.appendChild(bubble);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function speak(text) {
+    if (!voiceOn || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 0.95;
+    const voices = window.speechSynthesis.getVoices();
+    const hindiVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+    if (hindiVoice) utterance.voice = hindiVoice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function sendMessage(text) {
+    const message = (text ?? input.value).trim();
+    if (!message) return;
+    addBubble('Tum', message, 'user');
+    input.value = '';
+    sendBtn.disabled = true;
+    status.textContent = 'Bot jawab soch raha hai...';
+    try {
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({message})
+      });
+      if (!response.ok) throw new Error('Server response error');
+      const data = await response.json();
+      addBubble('Bot', data.reply, 'bot');
+      status.textContent = 'Reply ready.';
+      speak(data.reply);
+    } catch (err) {
+      addBubble('Bot', 'Server se connection nahi ho paya. Thodi der baad dobara try karo.', 'bot');
+      status.textContent = 'Connection error.';
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  form.addEventListener('submit', e => { e.preventDefault(); sendMessage(); });
+  voiceBtn.addEventListener('click', () => {
+    voiceOn = !voiceOn;
+    voiceBtn.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
+    if (!voiceOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    status.textContent = voiceOn ? 'Voice replies ON.' : 'Voice replies OFF.';
+  });
+  clearBtn.addEventListener('click', () => {
+    messages.replaceChildren();
+    status.textContent = 'Chat clear ho gayi.';
+  });
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => { micBtn.disabled = true; status.textContent = 'Sun raha hoon... ab bolo.'; };
+    recognition.onresult = event => {
+      const transcript = event.results[0][0].transcript;
+      input.value = transcript;
+      sendMessage(transcript);
+    };
+    recognition.onerror = event => {
+      status.textContent = event.error === 'not-allowed'
+        ? 'Microphone permission allow karo.'
+        : 'Voice error: ' + event.error + '. Text input bhi use kar sakte ho.';
+    };
+    recognition.onend = () => { micBtn.disabled = false; };
+    micBtn.addEventListener('click', () => {
+      try { recognition.start(); } catch (e) { status.textContent = 'Mic dobara dabao ya page reload karo.'; }
+    });
+  } else {
+    micBtn.addEventListener('click', () => {
+      status.textContent = 'Is browser mein speech recognition available nahi hai. Chrome update karo ya text type karo.';
+    });
+  }
+})();
+</script>
+</body>
+</html>
