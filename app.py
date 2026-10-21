@@ -1,151 +1,68 @@
-from flask import Flask, request, jsonify, render_template
-import re
+import os
+
+from flask import Flask, render_template, request, jsonify
+from google import genai
 
 app = Flask(__name__)
 
+# API key Render ke Environment Variables se milegi.
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
-def detect_language(text, requested_language=None):
-    """Choose Hindi, English, or Hinglish response language."""
-    allowed = {"hi", "en", "hi-en"}
-    if requested_language in allowed:
-        return requested_language
+# Zaroorat padne par Render mein GEMINI_MODEL badal sakte ho.
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
-    if re.search(r"[\u0900-\u097F]", text):
-        return "hi"
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-    words = set(re.findall(r"[a-z]+", text.lower()))
-    hinglish_words = {
-        "kya", "kaise", "kaisa", "kab", "kyun", "kyon", "hai",
-        "hain", "ka", "ki", "ke", "mein", "me", "ko", "batao",
-        "bataiye", "chahiye", "fasal", "paani", "pani", "mitti",
-        "gehu", "gehun", "kheti", "sinchai", "khad", "mausam",
-        "kaise", "karo", "karna", "kitna", "kitni", "mera", "meri"
-    }
-    return "hi-en" if words & hinglish_words else "en"
+SYSTEM_INSTRUCTION = """
+You are Friend for Farmer, a helpful agriculture assistant for Indian farmers.
 
+Language rules:
+- If language is hi, answer in simple Hindi.
+- If language is en, answer in simple English.
+- If language is hi-en, answer in natural Hinglish using easy Hindi and English.
+- Follow the language selected by the user.
+- Give clear, practical, beginner-friendly answers with short headings or steps when useful.
 
-RESPONSES = {
-    "greeting": {
-        "hi": "नमस्ते किसान भाई! 🙏 मैं Friend for Farmer हूँ। आप फसल, मिट्टी, सिंचाई, खाद और खेती के बारे में पूछ सकते हैं। 🌱",
-        "en": "Hello, Farmer! 🙏 I am Friend for Farmer. Ask me about crops, soil, irrigation, fertilizer, and farming. 🌱",
-        "hi-en": "Namaste Kisaan Bhai! 🙏 Main Friend for Farmer hoon. Aap crops, soil, irrigation, fertilizer aur farming ke baare mein pooch sakte hain. 🌱"
-    },
-    "wheat": {
-        "hi": "🌾 गेहूँ की अच्छी पैदावार के लिए मिट्टी की जाँच कराएँ, फसल की अवस्था के अनुसार सिंचाई करें और संतुलित खाद दें। सही मात्रा के लिए स्थानीय कृषि विशेषज्ञ की सलाह लें।",
-        "en": "🌾 For better wheat yield, test your soil, irrigate according to the crop's growth stage, and use balanced fertilizer based on soil-test recommendations.",
-        "hi-en": "🌾 Gehu ki achhi yield ke liye soil test karayein, crop ki growth stage ke according irrigation karein aur soil-test recommendation ke hisaab se balanced fertilizer use karein."
-    },
-    "rice": {
-        "hi": "🌾 धान में सिंचाई का प्रबंधन मिट्टी, मौसम और फसल की अवस्था के अनुसार करें। अनावश्यक जलभराव और पानी की बर्बादी से बचें।",
-        "en": "🌾 Manage rice irrigation according to soil, weather, and crop stage. Avoid unnecessary waterlogging and water waste.",
-        "hi-en": "🌾 Rice mein soil, weather aur crop stage ke according irrigation manage karein. Extra waterlogging aur paani ki barbadi se bachein."
-    },
-    "maize": {
-        "hi": "🌽 मक्का की फसल में समय पर सिंचाई, खरपतवार नियंत्रण और मिट्टी की जाँच के अनुसार खाद देना उपयोगी है।",
-        "en": "🌽 Maize benefits from timely irrigation, weed control, and fertilizer based on soil-test recommendations.",
-        "hi-en": "🌽 Maize mein timely irrigation, weed control aur soil-test ke according fertilizer dena useful hai."
-    },
-    "soil": {
-        "hi": "🌱 मिट्टी की जाँच से pH और पोषक तत्वों की जानकारी मिलती है। इससे सही खाद चुनने और अनावश्यक खर्च घटाने में मदद मिलती है।",
-        "en": "🌱 Soil testing measures pH and nutrient levels. It helps you choose suitable fertilizer and avoid unnecessary costs.",
-        "hi-en": "🌱 Soil testing se pH aur nutrients ka pata chalta hai. Isse sahi fertilizer choose karne aur extra cost bachane mein help milti hai."
-    },
-    "water": {
-        "hi": "💧 सिंचाई का समय फसल, मिट्टी, मौसम और फसल की अवस्था पर निर्भर करता है। मिट्टी की नमी देखें और जलभराव से बचें।",
-        "en": "💧 Irrigation timing depends on the crop, soil, weather, and growth stage. Check soil moisture and avoid waterlogging.",
-        "hi-en": "💧 Irrigation ka time crop, soil, weather aur growth stage par depend karta hai. Soil moisture check karein aur waterlogging se bachein."
-    },
-    "fertilizer": {
-        "hi": "🌿 खाद का प्रकार और मात्रा फसल, मिट्टी की जाँच और फसल की अवस्था पर निर्भर करते हैं। मिट्टी की जाँच के आधार पर खाद दें।",
-        "en": "🌿 Fertilizer type and quantity depend on the crop, soil test, and growth stage. Follow local agricultural recommendations.",
-        "hi-en": "🌿 Fertilizer ki type aur quantity crop, soil test aur growth stage par depend karti hai. Local agriculture recommendations follow karein."
-    },
-    "weather": {
-        "hi": "🌦️ मैं अभी लाइव मौसम नहीं देख सकता। ताज़ा पूर्वानुमान के लिए मौसम विभाग या आधिकारिक मौसम सेवा देखें।",
-        "en": "🌦️ I cannot access live weather data right now. Check your official local weather service for the latest forecast.",
-        "hi-en": "🌦️ Main abhi live weather check nahi kar sakta. Latest forecast ke liye official local weather service dekhein."
-    },
-    "disease": {
-        "hi": "🍃 कृपया फसल का नाम और लक्षण बताएँ। सही पहचान और उपचार के लिए स्थानीय कृषि विशेषज्ञ या कृषि विज्ञान केंद्र (KVK) से सलाह लें।",
-        "en": "🍃 Please share the crop name and symptoms. Consult a local agricultural expert or Krishi Vigyan Kendra (KVK) for reliable diagnosis and treatment advice.",
-        "hi-en": "🍃 Crop ka naam aur symptoms batayein. Sahi diagnosis aur treatment ke liye local agriculture expert ya KVK se salah lein."
-    },
-    "schemes": {
-        "hi": "🏛️ किसान योजनाओं के लिए कृषि विभाग या आधिकारिक सरकारी पोर्टल देखें। पात्रता और नियम योजना के अनुसार बदलते हैं।",
-        "en": "🏛️ Check your agriculture department or official government portals for farmer schemes. Eligibility and rules vary by scheme.",
-        "hi-en": "🏛️ Farmer schemes ke liye agriculture department ya official government portal check karein. Eligibility aur rules scheme ke according alag hote hain."
-    },
-    "unknown": {
-        "hi": "माफ़ कीजिए, मैं यह सवाल अभी समझ नहीं पाया। आप फसल, मिट्टी, सिंचाई या खाद के बारे में पूछ सकते हैं।",
-        "en": "Sorry, I couldn't understand that question. Try asking about crops, soil, irrigation, or fertilizer.",
-        "hi-en": "Sorry, main abhi ye question samajh nahi paya. Aap crop, soil, irrigation ya fertilizer ke baare mein pooch sakte hain."
-    }
-}
+Agriculture rules:
+- Help with crops, soil, irrigation, seeds, nutrients, farming methods,
+  crop problems and general agriculture education.
+- Never pretend that you checked live weather, live market prices,
+  current government schemes or real-time data unless a verified tool is connected.
+- For crop disease or pest questions, explain possible causes carefully.
+  Do not confidently diagnose from limited information.
+- Do not invent pesticide names, doses, mixing instructions or guaranteed results.
+  Recommend checking the product label and consulting a qualified local
+  agriculture officer or Krishi Vigyan Kendra (KVK) when treatment is uncertain.
+- For government schemes, explain general information and advise checking
+  official government sources for current eligibility and application dates.
+- If a question lacks important details, ask a short follow-up question.
+- Be polite, useful and honest about uncertainty.
+"""
 
 
-def find_topic(message):
-    text = message.lower()
+def get_ai_reply(message, language):
+    """Gemini se agriculture-related answer generate karta hai."""
 
-    if any(x in text for x in (
-        "namaste", "hello", "hey", "नमस्ते", "नमस्कार", "प्रणाम"
-    )):
-        return "greeting"
+    prompt = f"""
+Selected response language: {language}
 
-    if any(x in text for x in (
-        "weather", "mausam", "मौसम", "बारिश", "वर्षा", "rain", "forecast"
-    )):
-        return "weather"
+Farmer's question:
+{message}
 
-    if any(x in text for x in (
-        "disease", "bimari", "बीमारी", "रोग", "कीट", "pest",
-        "daag", "दाग", "spots", "पत्ते पीले", "yellow leaves"
-    )):
-        return "disease"
+Answer the farmer in the selected language.
+"""
 
-    if any(x in text for x in (
-        "scheme", "yojana", "योजना", "subsidy", "सरकारी योजना",
-        "government scheme", "पीएम किसान", "pm kisan"
-    )):
-        return "schemes"
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=SYSTEM_INSTRUCTION + "\n\n" + prompt,
+    )
 
-    if any(x in text for x in (
-        "fertilizer", "fertiliser", "khad", "खाद", "उर्वरक", "manure"
-    )):
-        return "fertilizer"
+    reply = response.text
 
-    if any(x in text for x in (
-        "water", "irrigation", "sinchai", "सिंचाई", "पानी", "paani",
-        "सिंचन", "waterlogging"
-    )):
-        return "water"
+    if not reply or not reply.strip():
+        raise ValueError("The AI returned an empty response.")
 
-    if any(x in text for x in (
-        "soil", "mitti", "मिट्टी", "भूमि", "जमीन", "zameen"
-    )):
-        return "soil"
-
-    if any(x in text for x in (
-        "wheat", "gehu", "gehun", "गेहूँ", "गेहूं", "गेंहू"
-    )):
-        return "wheat"
-
-    if any(x in text for x in (
-        "rice", "paddy", "dhan", "धान", "चावल"
-    )):
-        return "rice"
-
-    if any(x in text for x in (
-        "maize", "corn", "makka", "मक्का"
-    )):
-        return "maize"
-
-    return "unknown"
-
-
-def get_reply(message, requested_language=None):
-    language = detect_language(message, requested_language)
-    topic = find_topic(message)
-    return RESPONSES[topic][language], language
+    return reply.strip()
 
 
 @app.route("/")
@@ -155,21 +72,84 @@ def home():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"}), 200
+    # Health check API key ke bina bhi kaam karega.
+    return jsonify({
+        "status": "ok",
+        "service": "Friend for Farmer"
+    })
 
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json(silent=True) or {}
-    message = str(data.get("message", data.get("text", ""))).strip()
-    requested_language = data.get("language")
+
+    message = str(data.get("message", "")).strip()
+    language = str(data.get("language", "hi-en")).strip().lower()
+
+    # Supported language values ko limit karte hain.
+    if language not in ("hi", "en", "hi-en"):
+        language = "hi-en"
 
     if not message:
-        return jsonify({"reply": "Please enter a message.", "language": "en"}), 400
+        return jsonify({
+            "reply": "Please apna sawal type ya bolkar bhejein.",
+            "language": language
+        }), 400
 
-    reply, language = get_reply(message, requested_language)
-    return jsonify({"reply": reply, "language": language})
+    if len(message) > 3000:
+        return jsonify({
+            "reply": "Please apna sawal 3000 characters se chhota rakhein.",
+            "language": language
+        }), 400
+
+    if client is None:
+        app.logger.error("GEMINI_API_KEY is not configured.")
+        return jsonify({
+            "reply": (
+                "AI abhi configure nahi hua hai. "
+                "Please administrator se API setup check karwayein."
+            ),
+            "language": language
+        }), 503
+
+    try:
+        reply = get_ai_reply(message, language)
+
+        return jsonify({
+            "reply": reply,
+            "language": language
+        })
+
+    except Exception:
+        # Secret keys ya internal error details user ko nahi dikhate.
+        app.logger.exception("Gemini API request failed.")
+
+        if language == "en":
+            error_reply = (
+                "Sorry, the AI service is temporarily unavailable. "
+                "Please try again in a little while."
+            )
+        elif language == "hi":
+            error_reply = (
+                "Maaf kijiye, AI seva abhi uplabdh nahi hai. "
+                "Kripya thodi der baad dobara koshish karein."
+            )
+        else:
+            error_reply = (
+                "Maaf kijiye, AI service abhi available nahi hai. "
+                "Thodi der baad dobara try karein."
+            )
+
+        return jsonify({
+            "reply": error_reply,
+            "language": language
+        }), 502
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Local testing only; Render par Gunicorn start command use hoga.
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )
