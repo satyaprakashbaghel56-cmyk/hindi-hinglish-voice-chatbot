@@ -1,58 +1,116 @@
-!doctype html>
-<html lang="hi">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#12315a">
-  <title>Friend for farmer</title>
+  <title>Friend for Farmer 🌾</title>
   <style>
-    :root { color-scheme: light; --navy:#12315a; --blue:#2563eb; --green:#15803d; }
+    :root { color-scheme: light; --navy:#12315a; --green:#247a43; --bg:#f2f7f2; }
     * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; background:#eef2f7; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#172033; display:flex; justify-content:center; padding:14px; }
-    .app { width:100%; max-width:760px; display:flex; flex-direction:column; min-height:calc(100vh - 28px); background:#fff; border-radius:22px; overflow:hidden; box-shadow:0 12px 38px #10203a18; }
-    header { background:var(--navy); color:white; padding:20px 18px; text-align:center; }
-    header h1 { margin:0; font-size:clamp(1.2rem,4vw,1.7rem); }
-    header p { margin:7px 0 0; font-size:.92rem; color:#dbeafe; }
-    #status { padding:8px 14px; font-size:.85rem; text-align:center; background:#f4f7fb; color:#526078; }
-    #messages { padding:16px; flex:1; overflow-y:auto; min-height:280px; max-height:58vh; display:flex; flex-direction:column; gap:12px; }
-    .bubble { padding:11px 14px; border-radius:16px; max-width:88%; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.45; }
-    .bot { background:#edf2f8; align-self:flex-start; border-bottom-left-radius:5px; }
-    .user { background:#dbeafe; align-self:flex-end; border-bottom-right-radius:5px; }
-    .label { display:block; font-size:.75rem; font-weight:700; margin-bottom:3px; opacity:.72; }
-    .composer { padding:12px; border-top:1px solid #e5eaf1; display:grid; grid-template-columns:1fr auto; gap:8px; }
-    input { min-width:0; padding:13px; border:1px solid #cbd5e1; border-radius:12px; font:inherit; outline-color:var(--blue); }
-    .controls { padding:0 12px 14px; display:flex; gap:8px; flex-wrap:wrap; }
-    button { border:0; border-radius:12px; padding:12px 14px; font:inherit; font-weight:700; cursor:pointer; }
-    button:disabled { opacity:.55; cursor:wait; }
-    #send { background:var(--blue); color:white; }
-    #mic { background:var(--green); color:white; flex:1; }
-    #voice { background:#e8edf5; color:#1e293b; flex:1; }
-    #clear { background:#fce7e7; color:#991b1b; }
-    .note { font-size:.78rem; color:#667085; text-align:center; padding:0 14px 14px; }
-    @media (max-width:480px) { body { padding:0; } .app { min-height:100vh; border-radius:0; } #messages { max-height:none; } button { padding:11px 12px; } }
+    body {
+      margin: 0; padding: 18px; background: var(--bg);
+      color: #18251c; font-family: Arial, sans-serif;
+    }
+    .app {
+      max-width: 760px; margin: 0 auto; background: white;
+      border-radius: 18px; padding: 20px;
+      box-shadow: 0 8px 28px #12315a18;
+    }
+    header { text-align: center; padding: 8px 0 14px; }
+    h1 { margin: 4px 0; color: var(--navy); font-size: clamp(1.5rem, 5vw, 2rem); }
+    header p { margin: 8px 0 0; color: #42634c; }
+    #status {
+      background: #edf4ff; color: #24466e; border-radius: 9px;
+      padding: 10px 12px; font-size: .92rem; margin-bottom: 12px;
+    }
+    .language-control {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin: 12px 0; font-weight: 700;
+    }
+    select, input, button { font: inherit; }
+    select { padding: 10px; border: 1px solid #b7c8bb; border-radius: 9px; background: white; }
+    #messages {
+      height: min(48vh, 440px); min-height: 260px; overflow-y: auto;
+      border: 1px solid #dbe6dc; border-radius: 12px; padding: 12px;
+      background: #fbfdfb;
+    }
+    .bubble {
+      max-width: 92%; padding: 11px 13px; margin: 8px 0;
+      border-radius: 12px; line-height: 1.5; overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+    .bubble .label { display: block; font-weight: 700; font-size: .8rem; margin-bottom: 4px; }
+    .bubble.bot { background: #e8f5e9; border-top-left-radius: 3px; }
+    .bubble.user { background: #e8f0ff; margin-left: auto; border-top-right-radius: 3px; }
+    .composer { display: flex; gap: 8px; margin-top: 12px; }
+    .composer input { min-width: 0; flex: 1; padding: 12px; border: 1px solid #b7c8bb; border-radius: 10px; }
+    button {
+      border: 0; background: var(--green); color: white; padding: 11px 14px;
+      border-radius: 10px; cursor: pointer; font-weight: 700;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .controls button { flex: 1; min-width: 120px; }
+    #voice { background: var(--navy); }
+    #clear { background: #59636e; }
+    .note { font-size: .82rem; line-height: 1.45; color: #536458; }
+    @media (max-width: 480px) {
+      body { padding: 8px; }
+      .app { padding: 12px; border-radius: 13px; }
+      .composer { flex-wrap: wrap; }
+      .composer input { flex-basis: 100%; }
+      .composer button { flex: 1; }
+    }
   </style>
 </head>
 <body>
   <main class="app">
     <header>
-      <h1> Friend for Farmer 🌾</h1>
+      <h1>Friend for Farmer 🌾</h1>
       <p>Kisaan ka dost, kheti mein madadgaar!</p>
     </header>
-    <div id="status" role="status">Ready — message likho ya 🎤 Speak dabao.</div>
+
+    <div id="status" role="status" aria-live="polite">
+      Ready — message likho ya 🎤 Speak dabao.
+    </div>
+
+    <div class="language-control">
+      <label for="language">🌐 Language / भाषा:</label>
+      <select id="language">
+        <option value="hi">हिन्दी (Hindi)</option>
+        <option value="en">English</option>
+        <option value="hi-en" selected>Hinglish</option>
+      </select>
+    </div>
+
     <section id="messages" aria-live="polite">
-   <div class="bubble bot"><span class="label">Friend for Farmer</span>Namaste Kisaan Bhai! 🙏 Main Friend for Farmer hoon. Aap mujhse kheti, faslon ki dekhbhal, sinchai aur mitti ke baare mein sawal pooch sakte hain. 🌱</div>
+      <div class="bubble bot">
+        <span class="label">Friend for Farmer</span>
+        Namaste Kisaan Bhai! 🙏 Main Friend for Farmer hoon.
+        Aap Hindi, English ya Hinglish mein kheti ke baare mein sawal pooch sakte hain. 🌱
+      </div>
     </section>
+
     <form class="composer" id="chat-form">
-      <input id="message" maxlength="1000" autocomplete="off" placeholder="Yahan message likho..." aria-label="Message">
+      <input id="message" maxlength="1000" autocomplete="off"
+        placeholder="Yahan message likho..." aria-label="Message">
       <button id="send" type="submit">Send</button>
     </form>
+
     <div class="controls">
       <button id="mic" type="button">🎤 Speak</button>
       <button id="voice" type="button">🔊 Voice ON</button>
       <button id="clear" type="button">Clear</button>
     </div>
-    <p class="note">Microphone ke liye browser permission zaroori hai. Speech recognition ko internet chahiye ho sakta hai.</p>
+
+    <p class="note">
+      Microphone ke liye browser permission zaroori hai. Speech recognition browser aur internet par depend karti hai.
+      Hinglish recognition perfect nahi ho sakti. Bot ke farming answers basic guidance hain; specific treatment ke liye
+      local agriculture expert/KVK se salah lein.
+    </p>
   </main>
+
 <script>
 (() => {
   const messages = document.getElementById('messages');
@@ -63,100 +121,172 @@
   const voiceBtn = document.getElementById('voice');
   const clearBtn = document.getElementById('clear');
   const status = document.getElementById('status');
+  const languageSelect = document.getElementById('language');
+
   let voiceOn = true;
   let recognition = null;
+  let speakingLanguage = 'hi-IN';
 
   function addBubble(who, text, type) {
     const bubble = document.createElement('div');
     bubble.className = `bubble ${type}`;
+
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = who;
+
     const content = document.createElement('span');
     content.textContent = text;
+
     bubble.append(label, content);
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
   }
 
-  function speak(text) {
+  function getSpeechLocale(text, selectedLanguage) {
+    if (selectedLanguage === 'en') return 'en-IN';
+    if (selectedLanguage === 'hi') return 'hi-IN';
+
+    // Hinglish: use English voice for mostly English/Latin text,
+    // Hindi voice if Devanagari is present.
+    if (/[\u0900-\u097F]/.test(text)) return 'hi-IN';
+    return 'en-IN';
+  }
+
+  function speak(text, selectedLanguage) {
     if (!voiceOn || !('speechSynthesis' in window)) return;
+
     window.speechSynthesis.cancel();
+    const locale = getSpeechLocale(text, selectedLanguage);
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'hi-IN';
+    utterance.lang = locale;
     utterance.rate = 0.95;
+    speakingLanguage = locale;
+
     const voices = window.speechSynthesis.getVoices();
-    const hindiVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
-    if (hindiVoice) utterance.voice = hindiVoice;
+    const prefix = locale.toLowerCase().split('-')[0];
+    const preferredVoice = voices.find(v =>
+      v.lang && v.lang.toLowerCase().startsWith(prefix)
+    );
+
+    if (preferredVoice) utterance.voice = preferredVoice;
     window.speechSynthesis.speak(utterance);
   }
 
   async function sendMessage(text) {
     const message = (text ?? input.value).trim();
     if (!message) return;
-    addBubble('Tum', message, 'user');
+
+    addBubble('Tum / You', message, 'user');
     input.value = '';
     sendBtn.disabled = true;
-    status.textContent = 'Bot jawab soch raha hai...';
+    status.textContent = 'Bot jawab taiyar kar raha hai... / Preparing reply...';
+
     try {
       const response = await fetch('/chat', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({message})
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          message,
+          language: languageSelect.value
+        })
       });
-      if (!response.ok) throw new Error('Server response error');
+
       const data = await response.json();
-      addBubble('Bot', data.reply, 'bot');
-      status.textContent = 'Reply ready.';
-      speak(data.reply);
+      if (!response.ok) throw new Error(data.reply || 'Server response error');
+
+      addBubble('Friend for Farmer', data.reply, 'bot');
+      status.textContent = 'Reply ready. / Jawab taiyar hai.';
+      speak(data.reply, data.language || languageSelect.value);
     } catch (err) {
-      addBubble('Bot', 'Server se connection nahi ho paya. Thodi der baad dobara try karo.', 'bot');
-      status.textContent = 'Connection error.';
+      addBubble(
+        'Friend for Farmer',
+        'Server se connection nahi ho paya. Thodi der baad dobara try karo. / Could not connect to the server. Please try again.',
+        'bot'
+      );
+      status.textContent = 'Connection error. Render logs check karein.';
     } finally {
       sendBtn.disabled = false;
       input.focus();
     }
   }
 
-  form.addEventListener('submit', e => { e.preventDefault(); sendMessage(); });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    sendMessage();
+  });
+
   voiceBtn.addEventListener('click', () => {
     voiceOn = !voiceOn;
     voiceBtn.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
-    if (!voiceOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
-    status.textContent = voiceOn ? 'Voice replies ON.' : 'Voice replies OFF.';
-  });
-  clearBtn.addEventListener('click', () => {
-    messages.replaceChildren();
-    status.textContent = 'Chat clear ho gayi.';
+
+    if (!voiceOn && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    status.textContent = voiceOn
+      ? 'Voice replies ON. / Awaaz mein jawab ON.'
+      : 'Voice replies OFF. / Awaaz mein jawab OFF.';
   });
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  clearBtn.addEventListener('click', () => {
+    messages.replaceChildren();
+    status.textContent = 'Chat clear ho gayi. / Chat cleared.';
+  });
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onstart = () => { micBtn.disabled = true; status.textContent = 'Sun raha hoon... ab bolo.'; };
+
+    function updateRecognitionLanguage() {
+      // Web Speech API generally has no dedicated Hinglish locale.
+      recognition.lang = languageSelect.value === 'en' ? 'en-IN' : 'hi-IN';
+    }
+
+    updateRecognitionLanguage();
+    languageSelect.addEventListener('change', updateRecognitionLanguage);
+
+    recognition.onstart = () => {
+      micBtn.disabled = true;
+      status.textContent = 'Sun raha hoon... ab bolo. / Listening... speak now.';
+    };
+
     recognition.onresult = event => {
       const transcript = event.results[0][0].transcript;
       input.value = transcript;
       sendMessage(transcript);
     };
+
     recognition.onerror = event => {
       status.textContent = event.error === 'not-allowed'
-        ? 'Microphone permission allow karo.'
+        ? 'Microphone permission allow karo. / Please allow microphone access.'
         : 'Voice error: ' + event.error + '. Text input bhi use kar sakte ho.';
     };
-    recognition.onend = () => { micBtn.disabled = false; };
+
+    recognition.onend = () => {
+      micBtn.disabled = false;
+    };
+
     micBtn.addEventListener('click', () => {
-      try { recognition.start(); } catch (e) { status.textContent = 'Mic dobara dabao ya page reload karo.'; }
+      try {
+        updateRecognitionLanguage();
+        recognition.start();
+      } catch (error) {
+        status.textContent = 'Mic dobara dabao ya page reload karo. / Try again or reload.';
+      }
     });
   } else {
     micBtn.addEventListener('click', () => {
-      status.textContent = 'Is browser mein speech recognition available nahi hai. Chrome update karo ya text type karo.';
+      status.textContent =
+        'Is browser mein speech recognition available nahi hai. Chrome use karo ya text type karo.';
     });
   }
 })();
 </script>
 </body>
 </html>
+
