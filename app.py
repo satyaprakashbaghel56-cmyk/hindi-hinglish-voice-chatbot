@@ -1,3 +1,4 @@
+
 import os
 from flask import Flask, render_template, request, jsonify
 from google import genai
@@ -11,43 +12,19 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 SYSTEM_INSTRUCTION = """
 You are Friend for Farmer, an agriculture assistant for Indian farmers.
-
-Reply according to the selected language:
+Reply in the selected language:
 - hi: simple Hindi
 - en: simple English
 - hi-en: natural Hinglish
 
-Give practical, clear answers about crops, soil, irrigation, seeds,
-fertilizers and farming.
-
-Never claim to know live weather, mandi prices or current scheme details
-unless verified data is available.
-
-For uncertain crop diseases or pest treatments, ask for symptoms and
-recommend consulting a local agriculture expert or KVK.
-Do not invent pesticide doses or guarantee results.
+Give clear, practical advice about crops, soil, irrigation,
+seeds, fertilizers and farming.
+Do not invent live weather, market prices, government scheme details,
+or unsafe pesticide instructions.
+For uncertain crop diseases, ask for symptoms and recommend a
+local agriculture expert or Krishi Vigyan Kendra (KVK).
 Be polite and honest about uncertainty.
 """
-
-
-def get_ai_reply(message, language):
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=(
-            SYSTEM_INSTRUCTION
-            + "\n\nSelected language: "
-            + language
-            + "\nFarmer's question: "
-            + message
-        ),
-    )
-
-    reply = response.text
-
-    if not reply or not reply.strip():
-        raise ValueError("Empty response from Gemini")
-
-    return reply.strip()
 
 
 @app.route("/")
@@ -64,7 +41,10 @@ def health():
 def chat():
     data = request.get_json(silent=True) or {}
 
-    message = str(data.get("message", "")).strip()
+    message = str(
+        data.get("message", data.get("text", ""))
+    ).strip()
+
     language = str(data.get("language", "hi-en")).strip().lower()
 
     if language not in ("hi", "en", "hi-en"):
@@ -84,28 +64,39 @@ def chat():
 
     if client is None:
         return jsonify({
-            "reply": (
-                "AI configure nahi hua hai. "
-                "Render mein GEMINI_API_KEY check karein."
-            ),
+            "reply": "AI setup nahi hua hai. Render mein GEMINI_API_KEY check karein.",
             "language": language
         }), 503
 
     try:
-        reply = get_ai_reply(message, language)
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=(
+                SYSTEM_INSTRUCTION
+                + "\nSelected language: "
+                + language
+                + "\nFarmer's question: "
+                + message
+            )
+        )
+
+        reply = response.text
+
+        if not reply or not reply.strip():
+            raise ValueError("Gemini returned an empty response")
 
         return jsonify({
-            "reply": reply,
+            "reply": reply.strip(),
             "language": language
         }), 200
 
     except Exception:
         app.logger.exception("Gemini request failed")
 
-        if language == "en":
+        if language == "hi":
+            error = "AI seva abhi uplabdh nahi hai. Thodi der baad try karein."
+        elif language == "en":
             error = "AI service is temporarily unavailable. Please try again."
-        elif language == "hi":
-            error = "AI seva abhi uplabdh nahi hai. Kripya dobara koshish karein."
         else:
             error = "AI service abhi available nahi hai. Thodi der baad try karein."
 
